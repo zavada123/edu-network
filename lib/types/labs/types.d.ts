@@ -1,4 +1,10 @@
 export type Check = {
+    type: 'linked';
+    a: string;
+    b: string;
+} | {
+    type: 'unique-ips';
+} | {
     type: 'iface-ip';
     device: string;
     iface: string;
@@ -47,6 +53,8 @@ export interface Objective {
     id: string;
     label: string;
     check: Check;
+    /** Shown on request when the objective is not met yet: a nudge, not the answer. */
+    hint?: string;
 }
 export interface QuizQ {
     q: string;

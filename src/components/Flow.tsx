@@ -6,6 +6,7 @@ import {
   MiniMap,
   ReactFlow,
   useReactFlow,
+  type FitViewOptions,
 } from '@xyflow/react';
 import type { DragEvent } from 'react';
 import { useStore } from '../store';
@@ -37,9 +38,24 @@ export function Flow() {
   const onConnect = useStore((s) => s.onConnect);
   const select = useStore((s) => s.select);
   const openTerminal = useStore((s) => s.openTerminal);
+  const kids = useStore((s) => s.mode === 'kids');
+  const lab = useStore((s) => s.lab !== null);
   const tick = useStore((s) => s.tick);
   const addDeviceAt = useStore((s) => s.addDeviceAt);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
+  const loadSeq = useStore((s) => s.loadSeq);
+  const fitOptions: FitViewOptions = {
+    // The task panel covers the left of the canvas; keep the network out from under it.
+    padding: lab && window.innerWidth > 720 ? { top: '40px', bottom: '40px', right: '40px', left: '400px' } : lab ? { top: '45%', bottom: '20px', x: '20px' } : 0.25,
+    maxZoom: 1.25,
+  };
+
+  useEffect(() => {
+    if (loadSeq === 0) return;
+    const id = requestAnimationFrame(() => fitView(fitOptions));
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadSeq]);
 
   // Advance the virtual clock in real time; the engine itself is
   // deterministic and only moves when we push it. rAF drives smooth
@@ -91,7 +107,7 @@ export function Flow() {
       onNodeClick={(_, n) => select(n.id)}
       onPaneClick={() => select(null)}
       onNodeDoubleClick={(_, n: DevNode) => {
-        if (n.data.kind !== 'switch') openTerminal(n.id);
+        if (!kids && n.data.kind !== 'switch') openTerminal(n.id);
       }}
       onDrop={onDrop}
       onDragOver={(e) => {
@@ -105,7 +121,7 @@ export function Flow() {
       minZoom={0.25}
       maxZoom={2.5}
       fitView
-      fitViewOptions={{ padding: 0.25, maxZoom: 1.25 }}
+      fitViewOptions={fitOptions}
     >
       <Background gap={26} size={1.6} />
       <Controls showInteractive={false} />

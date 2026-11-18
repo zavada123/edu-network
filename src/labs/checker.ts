@@ -12,6 +12,13 @@ export interface CheckResult {
   detail: string;
 }
 
+// Errors from the engine keep real Linux wording for the terminal; the lab panel shows them in Ukrainian.
+const SEND_ERRORS: Record<string, string> = {
+  'Network is unreachable': 'мережа недосяжна: немає маршруту',
+  'Operation not permitted': 'заборонено брандмауером',
+};
+const ua = (msg: string) => SEND_ERRORS[msg] ?? msg;
+
 const PING_TIMEOUT_MS = 3500;
 const TCP_TIMEOUT_MS = 3000;
 const HTTP_TIMEOUT_MS = 4000;
@@ -33,56 +40,80 @@ function targetAddr(net: Network, toDevice?: string, toAddr?: string): U32 | nul
   return null;
 }
 
+function deviceByName(net: Network, name: string) {
+  for (const d of net.devices.values()) if (d.name === name) return d;
+  return null;
+}
+
 function runOne(net: Network, check: Check, done: (pass: boolean, detail: string) => void): void {
   switch (check.type) {
+    case 'linked': {
+      const a = deviceByName(net, check.a);
+      if (!a) return done(false, `немає пристрою ${check.a}`);
+      const ok = a.interfaces.some((i) => i.link && i.link.other(i).device.name === check.b);
+      return done(ok, ok ? `${check.a} з’єднано з ${check.b}` : `${check.a} ще не з’єднано з ${check.b}`);
+    }
+    case 'unique-ips': {
+      const owner = new Map<U32, string>();
+      for (const d of net.devices.values()) {
+        if (!(d instanceof IpDevice)) continue;
+        for (const i of d.interfaces) {
+          if (!i.ip) continue;
+          const other = owner.get(i.ip.addr);
+          if (other) return done(false, `${other} і ${d.name} мають однакову адресу ${ipToString(i.ip.addr)}`);
+          owner.set(i.ip.addr, d.name);
+        }
+      }
+      return done(true, 'усі адреси різні');
+    }
     case 'iface-ip': {
       const d = findDevice(net, check.device);
       const iface = d?.getInterface(check.iface);
-      if (!d || !iface) return done(false, `no device/interface ${check.device}/${check.iface}`);
-      if (!iface.ip) return done(false, `${check.iface} has no address yet`);
+      if (!d || !iface) return done(false, `немає пристрою або порту ${check.device}/${check.iface}`);
+      if (!iface.ip) return done(false, `у ${check.iface} ще немає адреси`);
       const got = cidrToString(iface.ip.addr, iface.ip.prefix);
-      if (check.cidr) return done(got === check.cidr, `${check.iface} is ${got}`);
+      if (check.cidr) return done(got === check.cidr, `${check.iface} має адресу ${got}`);
       if (check.inSubnet) {
         const net_ = parseCidr(check.inSubnet);
-        if (!net_) return done(false, 'bad subnet in lab definition');
+        if (!net_) return done(false, 'помилка в завданні: неправильна підмережа');
         const ok =
           networkOf(iface.ip.addr, net_.prefix) === networkOf(net_.addr, net_.prefix) &&
           iface.ip.prefix === net_.prefix;
-        return done(ok, `${check.iface} is ${got}`);
+        return done(ok, `${check.iface} має адресу ${got}`);
       }
-      return done(true, `${check.iface} is ${got}`);
+      return done(true, `${check.iface} має адресу ${got}`);
     }
     case 'default-route': {
       const d = findDevice(net, check.device);
-      if (!d) return done(false, `no device ${check.device}`);
+      if (!d) return done(false, `немає пристрою ${check.device}`);
       const def = d.routes().find((r) => r.prefix === 0);
-      if (!def) return done(false, 'no default route');
+      if (!def) return done(false, 'шлюз не задано');
       if (check.via) {
         const via = parseIp(check.via);
         return done(
           def.via === via,
-          `default via ${def.via !== null ? ipToString(def.via) : '(direct)'}`,
+          `шлюз: ${def.via !== null ? ipToString(def.via) : '(напряму)'}`,
         );
       }
-      return done(true, 'default route present');
+      return done(true, 'шлюз задано');
     }
     case 'forwarding': {
       const d = findDevice(net, check.device);
-      if (!d) return done(false, `no device ${check.device}`);
-      return done(d.forwarding === check.expect, `ip_forward = ${d.forwarding ? 1 : 0}`);
+      if (!d) return done(false, `немає пристрою ${check.device}`);
+      return done(d.forwarding === check.expect, `пересилання пакетів: ${d.forwarding ? 'увімкнено' : 'вимкнено'}`);
     }
     case 'fw-policy': {
       const d = findDevice(net, check.device);
-      if (!d) return done(false, `no device ${check.device}`);
+      if (!d) return done(false, `немає пристрою ${check.device}`);
       const chain = d.fw.filter[check.hook];
-      if (!chain.declared) return done(false, `${check.hook} chain not declared`);
-      return done(chain.policy === check.policy, `${check.hook} policy is ${chain.policy}`);
+      if (!chain.declared) return done(false, `ланцюжок ${check.hook} не створено`);
+      return done(chain.policy === check.policy, `політика ${check.hook}: ${chain.policy}`);
     }
     case 'ping': {
       const from = findDevice(net, check.from);
-      if (!from) return done(false, `no device ${check.from}`);
+      if (!from) return done(false, `немає пристрою ${check.from}`);
       const target = targetAddr(net, check.toDevice, check.toAddr);
-      if (target === null) return done(false, 'target has no address');
+      if (target === null) return done(false, 'у пристрою-адресата немає адреси');
       const wantSuccess = check.expect === 'success';
       const id = from.allocIcmpId();
       let finished = false;
@@ -93,45 +124,45 @@ function runOne(net: Network, check: Check, done: (pass: boolean, detail: string
         done(gotReply === wantSuccess, note);
       };
       from.onIcmp(id, (ev) => {
-        if (ev.type === 'reply') finish(true, `reply from ${ipToString(ev.from)}`);
-        else if (ev.type === 'unreachable') finish(false, `unreachable (from ${ipToString(ev.from)})`);
-        else if (ev.type === 'send-error') finish(false, ev.message);
+        if (ev.type === 'reply') finish(true, `відповідь від ${ipToString(ev.from)}`);
+        else if (ev.type === 'unreachable') finish(false, `адресат недосяжний (повідомив ${ipToString(ev.from)})`);
+        else if (ev.type === 'send-error') finish(false, ua(ev.message));
       });
       const err = from.sendEcho(target, id, 1);
-      if (err) return finish(false, err);
-      net.scheduler.schedule(PING_TIMEOUT_MS, () => finish(false, 'no reply (timed out)'));
+      if (err) return finish(false, ua(err));
+      net.scheduler.schedule(PING_TIMEOUT_MS, () => finish(false, 'немає відповіді (час вичерпано)'));
       return;
     }
     case 'tcp': {
       const from = findDevice(net, check.from);
-      if (!from) return done(false, `no device ${check.from}`);
+      if (!from) return done(false, `немає пристрою ${check.from}`);
       const target = targetAddr(net, check.toDevice, check.toAddr);
-      if (target === null) return done(false, 'target has no address');
+      if (target === null) return done(false, 'у пристрою-адресата немає адреси');
       const err = from.connectTcp(target, check.port, TCP_TIMEOUT_MS, (r) => {
         const observed = r === 'open' ? 'open' : r === 'refused' ? 'refused' : 'filtered';
-        done(observed === check.expect, `port ${check.port} is ${observed}`);
+        done(observed === check.expect, `порт ${check.port}: ${observed}`);
       });
       if (err) done(check.expect === 'filtered', err);
       return;
     }
     case 'dns': {
       const from = findDevice(net, check.from);
-      if (!from) return done(false, `no device ${check.from}`);
-      if (from.nameserver === null) return done(false, 'no nameserver configured');
+      if (!from) return done(false, `немає пристрою ${check.from}`);
+      if (from.nameserver === null) return done(false, 'DNS-сервер не задано');
       from.resolveDns(check.name, from.nameserver, (r) => {
         if (typeof r === 'number') {
-          if (check.expect !== 'resolves') return done(false, `resolved to ${ipToString(r)}`);
-          if (check.addr) return done(ipToString(r) === check.addr, `resolved to ${ipToString(r)}`);
-          return done(true, `resolved to ${ipToString(r)}`);
+          if (check.expect !== 'resolves') return done(false, `ім’я відповідає ${ipToString(r)}`);
+          if (check.addr) return done(ipToString(r) === check.addr, `ім’я відповідає ${ipToString(r)}`);
+          return done(true, `ім’я відповідає ${ipToString(r)}`);
         }
-        if (r === null) return done(check.expect === 'nxdomain', 'NXDOMAIN');
-        return done(false, `lookup failed (${r})`);
+        if (r === null) return done(check.expect === 'nxdomain', 'такого імені немає (NXDOMAIN)');
+        return done(false, `пошук імені не вдався (${r})`);
       });
       return;
     }
     case 'http': {
       const from = findDevice(net, check.from);
-      if (!from) return done(false, `no device ${check.from}`);
+      if (!from) return done(false, `немає пристрою ${check.from}`);
       let rest = check.url.startsWith('http://') ? check.url.slice(7) : check.url;
       const slash = rest.indexOf('/');
       const hostPort = slash < 0 ? rest : rest.slice(0, slash);
@@ -143,21 +174,21 @@ function runOne(net: Network, check: Check, done: (pass: boolean, detail: string
       const withIp = (ip: U32) => {
         const err = from.httpGet(ip, port, path, host, HTTP_TIMEOUT_MS, (r) => {
           if (r.ok) {
-            if (!wantOk) return done(false, `got HTTP ${r.status}`);
+            if (!wantOk) return done(false, `сторінка відкрилася (HTTP ${r.status})`);
             if (check.contains && !r.body.includes(check.contains))
-              return done(false, 'page is missing the expected content');
+              return done(false, 'на сторінці немає потрібного тексту');
             return done(true, `HTTP ${r.status} ${r.reason}`);
           }
-          return done(!wantOk, `fetch failed (${r.error})`);
+          return done(!wantOk, `сторінка не відкрилася (${r.error})`);
         });
         if (err) done(!wantOk, err);
       };
       const literal = parseIp(host);
       if (literal !== null) return withIp(literal);
-      if (from.nameserver === null) return done(!wantOk, 'cannot resolve host (no nameserver)');
+      if (from.nameserver === null) return done(!wantOk, 'не вдалося знайти ім’я: DNS-сервер не задано');
       from.resolveDns(host, from.nameserver, (r) => {
         if (typeof r === 'number') withIp(r);
-        else done(!wantOk, `cannot resolve ${host}`);
+        else done(!wantOk, `не вдалося знайти ім’я ${host}`);
       });
       return;
     }

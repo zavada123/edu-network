@@ -7,6 +7,7 @@ import { cidrToString, ipToString } from '../engine/ip';
 import { formatNeigh, formatRoutes } from '../commands/ip-cmd';
 import { formatConntrack } from '../commands/shell';
 import { listRuleset } from '../engine/firewall-fmt';
+import { KIND_NAMES } from './KidsInspector';
 
 // A small controlled input that commits on blur/Enter and reverts on error.
 function CommitInput({
@@ -54,39 +55,39 @@ function DhcpPanel({ device }: { device: IpDevice }) {
   return (
     <details className="svc" open={cfg?.enabled}>
       <summary>
-        DHCP server <span className={`svc-state ${cfg?.enabled ? 'on' : ''}`}>{cfg?.enabled ? 'on' : 'off'}</span>
+        DHCP-сервер <span className={`svc-state ${cfg?.enabled ? 'on' : ''}`}>{cfg?.enabled ? 'увімк.' : 'вимк.'}</span>
       </summary>
       <label className="svc-toggle">
         <input type="checkbox" checked={cfg?.enabled ?? false} onChange={() => toggle(device.id)} />
-        serve leases on this device
+        роздавати адреси з цього пристрою
       </label>
       {cfg && (
         <>
           <div className="svc-grid">
-            <span>range</span>
+            <span>від</span>
             <CommitInput
               key={device.id + ipToString(cfg.rangeStart)}
               value={ipToString(cfg.rangeStart)}
               onCommit={(t) => setField(device.id, 'rangeStart', t)}
             />
-            <span>to</span>
+            <span>до</span>
             <CommitInput
               key={device.id + ipToString(cfg.rangeEnd)}
               value={ipToString(cfg.rangeEnd)}
               onCommit={(t) => setField(device.id, 'rangeEnd', t)}
             />
-            <span>router</span>
+            <span>шлюз</span>
             <CommitInput
               key={device.id + (cfg.router ?? 'r')}
               value={cfg.router !== null ? ipToString(cfg.router) : ''}
-              placeholder="none advertised"
+              placeholder="не роздається"
               onCommit={(t) => setField(device.id, 'router', t)}
             />
             <span>dns</span>
             <CommitInput
               key={device.id + (cfg.dns ?? 'd')}
               value={cfg.dns !== null ? ipToString(cfg.dns) : ''}
-              placeholder="none advertised"
+              placeholder="не роздається"
               onCommit={(t) => setField(device.id, 'dns', t)}
             />
           </div>
@@ -95,7 +96,7 @@ function DhcpPanel({ device }: { device: IpDevice }) {
               {[...cfg.leases.entries()].map(([mac, ip]) => `${ipToString(ip)}  ${mac}\n`).join('')}
             </pre>
           )}
-          <span className="hint">Clients run `dhclient` to get a lease.</span>
+          <span className="hint">Клієнти отримують адресу командою `dhclient`.</span>
         </>
       )}
     </details>
@@ -114,17 +115,17 @@ function DnsPanel({ device }: { device: IpDevice }) {
   return (
     <details className="svc" open={cfg?.enabled}>
       <summary>
-        DNS server <span className={`svc-state ${cfg?.enabled ? 'on' : ''}`}>{cfg?.enabled ? 'on' : 'off'}</span>
+        DNS-сервер <span className={`svc-state ${cfg?.enabled ? 'on' : ''}`}>{cfg?.enabled ? 'увімк.' : 'вимк.'}</span>
       </summary>
       <label className="svc-toggle">
         <input type="checkbox" checked={cfg?.enabled ?? false} onChange={() => toggle(device.id)} />
-        answer A-record queries on udp/53
+        відповідати на запити A-записів (udp/53)
       </label>
       {cfg && (
         <>
           <textarea
             className="svc-textarea"
-            placeholder={'records, /etc/hosts style:\n10.0.0.20 web.lan'}
+            placeholder={'записи у форматі /etc/hosts:\n10.0.0.20 web.lan'}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onBlur={() => {
@@ -136,7 +137,7 @@ function DnsPanel({ device }: { device: IpDevice }) {
               }
             }}
           />
-          <span className="hint">One record per line: &lt;ip&gt; &lt;name&gt; — query with `dig`.</span>
+          <span className="hint">Один запис у рядку: &lt;ip&gt; &lt;ім’я&gt;. Перевірка: `dig`.</span>
         </>
       )}
     </details>
@@ -152,16 +153,16 @@ function HttpPanel({ device }: { device: IpDevice }) {
   return (
     <details className="svc" open={cfg?.enabled}>
       <summary>
-        Web server <span className={`svc-state ${cfg?.enabled ? 'on' : ''}`}>{cfg?.enabled ? 'on' : 'off'}</span>
+        Вебсервер <span className={`svc-state ${cfg?.enabled ? 'on' : ''}`}>{cfg?.enabled ? 'увімк.' : 'вимк.'}</span>
       </summary>
       <label className="svc-toggle">
         <input type="checkbox" checked={cfg?.enabled ?? false} onChange={() => toggle(device.id)} />
-        serve HTTP
+        віддавати сторінку по HTTP
       </label>
       {cfg && (
         <>
           <div className="svc-grid">
-            <span>port</span>
+            <span>порт</span>
             <CommitInput
               key={device.id + cfg.port}
               value={String(cfg.port)}
@@ -175,7 +176,7 @@ function HttpPanel({ device }: { device: IpDevice }) {
             onChange={(e) => setBodyText(e.target.value)}
             onBlur={() => setBody(device.id, body)}
           />
-          <span className="hint">Fetch it with `curl http://&lt;address&gt;/`.</span>
+          <span className="hint">Відкрити: `curl http://&lt;адреса&gt;/`.</span>
         </>
       )}
     </details>
@@ -203,7 +204,7 @@ function ServicesRow({ deviceId, proto }: { deviceId: string; proto: 'tcp' | 'ud
       <span className="service-proto">{proto}</span>
       <input
         className="iface-ip"
-        placeholder="open ports, e.g. 22, 80"
+        placeholder="відкриті порти, напр. 22, 80"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={commit}
@@ -247,11 +248,11 @@ function IfaceRow({ deviceId, ifaceName }: { deviceId: string; ifaceName: string
       <div className="iface-name">
         {ifaceName}
         <span className="iface-mac">{iface.mac}</span>
-        {iface.link ? null : <span className="iface-unplugged">unplugged</span>}
+        {iface.link ? null : <span className="iface-unplugged">без кабелю</span>}
       </div>
       <input
         className="iface-ip"
-        placeholder="no address (CIDR)"
+        placeholder="немає адреси (CIDR)"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={commit}
@@ -290,12 +291,12 @@ export function Inspector() {
             if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
           }}
         />
-        <span className={`inspector-kind kind-${device.kind}`}>{device.kind}</span>
+        <span className={`inspector-kind kind-${device.kind}`}>{KIND_NAMES[device.kind]}</span>
       </div>
 
       {ipd && (
         <div className="inspector-forwarding">
-          IP forwarding: <strong>{ipd.forwarding ? 'on' : 'off'}</strong>
+          Пересилання пакетів: <strong>{ipd.forwarding ? 'увімк.' : 'вимк.'}</strong>
           <span className="hint"> (sysctl net.ipv4.ip_forward)</span>
         </div>
       )}
@@ -307,7 +308,7 @@ export function Inspector() {
             checked={ipd.ripEnabled}
             onChange={() => useStore.getState().toggleRip(device.id)}
           />
-          RIP routing — advertise &amp; learn routes (udp/520 broadcasts)
+          Маршрутизація RIP: оголошувати й вивчати маршрути (udp/520)
         </label>
       )}
 
@@ -324,7 +325,7 @@ export function Inspector() {
       )}
 
       <section>
-        <h3>Interfaces</h3>
+        <h3>Порти</h3>
         {device.interfaces.map((i) => (
           // Key includes the current address so the row re-seeds when a
           // terminal command (ip addr add, dhclient) changes it underneath us.
@@ -338,22 +339,22 @@ export function Inspector() {
 
       {ipd && (
         <section>
-          <h3>Routing table</h3>
-          <pre className="table-pre">{formatRoutes(ipd) || '(empty)\n'}</pre>
-          <h3>Neighbours (ARP)</h3>
-          <pre className="table-pre">{formatNeigh(ipd) || '(empty)\n'}</pre>
+          <h3>Таблиця маршрутів</h3>
+          <pre className="table-pre">{formatRoutes(ipd) || '(порожньо)\n'}</pre>
+          <h3>Сусіди (ARP)</h3>
+          <pre className="table-pre">{formatNeigh(ipd) || '(порожньо)\n'}</pre>
         </section>
       )}
 
       {ipd && (
         <section>
-          <h3>DNS client</h3>
+          <h3>DNS-клієнт</h3>
           <div className="svc-grid">
             <span>nameserver</span>
             <CommitInput
               key={ipd.id + (ipd.nameserver ?? 'ns')}
               value={ipd.nameserver !== null ? ipToString(ipd.nameserver) : ''}
-              placeholder="none (set by dhclient)"
+              placeholder="немає (задає dhclient)"
               onCommit={(t) => useStore.getState().setNameserver(ipd.id, t)}
             />
           </div>
@@ -362,14 +363,14 @@ export function Inspector() {
 
       {ipd && (
         <section>
-          <h3>Services</h3>
+          <h3>Служби</h3>
           <DhcpPanel key={ipd.id + 'dhcp'} device={ipd} />
           <DnsPanel key={ipd.id + 'dns'} device={ipd} />
           <HttpPanel key={ipd.id + 'http'} device={ipd} />
-          <h3 style={{ marginTop: 10 }}>Extra open ports</h3>
+          <h3 style={{ marginTop: 10 }}>Інші відкриті порти</h3>
           <ServicesRow key={ipd.id + 'tcp'} deviceId={ipd.id} proto="tcp" />
           <ServicesRow key={ipd.id + 'udp'} deviceId={ipd.id} proto="udp" />
-          <span className="hint">Open ports answer TCP connects / accept UDP; test them with nc.</span>
+          <span className="hint">Відкриті порти приймають TCP і UDP; перевірка: nc.</span>
         </section>
       )}
 
@@ -378,7 +379,7 @@ export function Inspector() {
           <h3>
             Firewall (nftables)
             <button className="mini-btn" onClick={() => useStore.getState().copyDeviceConfig(ipd.id)}>
-              copy config
+              копіювати
             </button>
           </h3>
           <pre className="table-pre">{listRuleset(ipd.fw)}</pre>
@@ -390,7 +391,7 @@ export function Inspector() {
           )}
           {ipd.fwLog.length > 0 && (
             <>
-              <h3>Firewall log (latest first)</h3>
+              <h3>Журнал брандмауера (нові вгорі)</h3>
               <pre className="table-pre fw-log">
                 {ipd.fwLog
                   .slice(0, 12)
@@ -407,7 +408,7 @@ export function Inspector() {
 
       {swd && (
         <section>
-          <h3>Port VLANs (access)</h3>
+          <h3>VLAN портів (access)</h3>
           {swd.interfaces
             .filter((i) => i.link)
             .map((i) => (
@@ -423,8 +424,8 @@ export function Inspector() {
                 />
               </div>
             ))}
-          {swd.interfaces.every((i) => !i.link) && <span className="hint">no connected ports</span>}
-          <h3 style={{ marginTop: 10 }}>MAC address table</h3>
+          {swd.interfaces.every((i) => !i.link) && <span className="hint">нічого не під’єднано</span>}
+          <h3 style={{ marginTop: 10 }}>Таблиця MAC-адрес</h3>
           <pre className="table-pre">
             {swd.macTable.size
               ? [...swd.macTable.entries()]
@@ -433,7 +434,7 @@ export function Inspector() {
                     return `vlan ${vlan.padEnd(5)}${mac}  ${port.name}\n`;
                   })
                   .join('')
-              : '(empty — forward a frame to teach me)\n'}
+              : '(порожньо: світч вивчить адреси з перших кадрів)\n'}
           </pre>
         </section>
       )}
@@ -441,7 +442,7 @@ export function Inspector() {
       {ipd && (
         <section className="inspector-arp-note">
           <span className="hint">
-            Addresses set here run the same code as <code>ip address add</code> in the terminal.
+            Адреси, задані тут, працюють так само, як <code>ip address add</code> у терміналі.
           </span>
         </section>
       )}
@@ -449,11 +450,11 @@ export function Inspector() {
       <div className="inspector-actions">
         {ipd && (
           <button className="btn" onClick={() => openTerminal(device.id)}>
-            Open terminal
+            Відкрити термінал
           </button>
         )}
         <button className="btn danger" onClick={() => deleteDevice(device.id)}>
-          Delete device
+          Видалити пристрій
         </button>
       </div>
     </aside>

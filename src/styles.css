@@ -74,6 +74,7 @@ body,
 }
 
 .btn {
+  white-space: nowrap;
   background: var(--bg-raised);
   color: var(--text);
   border: 1px solid var(--border);
@@ -613,23 +614,6 @@ a.btn {
   align-items: center;
 }
 
-.home-link {
-  position: fixed;
-  bottom: 8px;
-  left: 10px;
-  z-index: 60;
-  font-size: 11px;
-  color: var(--text-dim);
-  text-decoration: none;
-  opacity: 0.6;
-  transition: opacity 0.15s;
-}
-
-.home-link:hover {
-  opacity: 1;
-  color: var(--accent);
-}
-
 .lab-pill {
   position: absolute;
   top: 12px;
@@ -982,4 +966,217 @@ a.btn {
 
 .term-host .xterm {
   height: 100%;
+}
+
+/* ---------- kids mode ---------- */
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #06202e;
+  font-weight: 600;
+}
+.btn.primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.app.kids .btn {
+  font-size: 14px;
+  padding: 8px 14px;
+}
+.app.kids .palette-item-label {
+  font-size: 15px;
+}
+.app.kids .inspector {
+  width: 320px;
+  font-size: 14px;
+}
+.kid-port {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.kid-port-head {
+  font-weight: 600;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.kid-peer {
+  font-weight: 400;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.kid-peer.none {
+  color: var(--danger);
+}
+.kid-field {
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.kid-field span {
+  color: var(--text-dim);
+}
+.kid-field input,
+.kid-field select,
+.kid-conn select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 15px;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  min-width: 0;
+}
+.kid-field input:focus,
+.kid-field select:focus,
+.kid-conn select:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+.kid-note {
+  color: var(--text-dim);
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+.kid-ports {
+  margin: 0;
+  padding-left: 18px;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+.kid-conn h3 {
+  margin: 0 0 8px;
+}
+.kid-conn-row {
+  display: flex;
+  gap: 8px;
+}
+.kid-conn-row select {
+  flex: 1;
+}
+.kid-conn-result {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+.kid-conn-result.ok {
+  background: rgba(52, 211, 153, 0.14);
+  color: #7fdc9c;
+}
+.kid-conn-result.fail {
+  background: rgba(248, 113, 113, 0.12);
+  color: #fca5a5;
+}
+.lab-hint-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline dotted;
+}
+.lab-hint {
+  display: block;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--text);
+}
+.lab-done {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(52, 211, 153, 0.14);
+  color: #7fdc9c;
+  font-weight: 600;
+}
+.app.kids .lab-objective {
+  font-size: 13.5px;
+}
+.app.kids .lab-body {
+  font-size: 14px;
+}
+
+/* ---------- phone ---------- */
+@media (max-width: 720px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .main,
+  .palette,
+  .toolbar {
+    min-width: 0;
+  }
+  .toolbar {
+    gap: 8px;
+    padding: 0 8px;
+    overflow-x: auto;
+  }
+  .brand {
+    display: none;
+  }
+  .app.kids .btn {
+    padding: 7px 10px;
+    white-space: nowrap;
+  }
+  .main {
+    flex-direction: column;
+  }
+  .palette {
+    width: auto;
+    flex-direction: row;
+    padding: 6px 8px;
+    gap: 6px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .palette-title,
+  .palette-hint,
+  .palette-item-blurb {
+    display: none;
+  }
+  .palette-item {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+  }
+  .app.kids .palette-item-label {
+    font-size: 13px;
+  }
+  .canvas {
+    flex: 1;
+    min-height: 0;
+  }
+  .lab-panel {
+    left: 8px;
+    right: 8px;
+    top: 8px;
+    width: auto;
+    max-height: 42%;
+  }
+  .inspector,
+  .app.kids .inspector {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-height: 55vh;
+    z-index: 60;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+  }
+  .react-flow__minimap {
+    display: none;
+  }
 }

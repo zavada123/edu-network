@@ -26,6 +26,8 @@ export function LabPanel() {
   const exportAttempt = useStore((s) => s.exportAttempt);
   const closeLab = useStore((s) => s.closeLab);
   const [collapsed, setCollapsed] = useState(false);
+  const [openHints, setOpenHints] = useState<Record<string, boolean>>({});
+  const kids = useStore((s) => s.mode === 'kids');
 
   if (!lab) return null;
   const step = lab.steps[stepIdx];
@@ -44,10 +46,10 @@ export function LabPanel() {
     <div className="lab-panel">
       <div className="lab-head">
         <div className="lab-title">{lab.title}</div>
-        <button className="tab-close" title="Collapse" onClick={() => setCollapsed(true)}>
+        <button className="tab-close" title="Згорнути" onClick={() => setCollapsed(true)}>
           –
         </button>
-        <button className="tab-close" title="Close lab (keeps the topology)" onClick={() => closeLab()}>
+        <button className="tab-close" title="Закрити завдання (схема залишиться)" onClick={() => closeLab()}>
           ×
         </button>
       </div>
@@ -60,16 +62,20 @@ export function LabPanel() {
           />
         </div>
         <span>
-          {passed}/{allObjectives.length} objectives
+          виконано {passed} з {allObjectives.length}
         </span>
       </div>
+
+      {allObjectives.length > 0 && passed === allObjectives.length && (
+        <div className="lab-done">🎉 Завдання виконано!</div>
+      )}
 
       <div className="lab-stepnav">
         <button className="btn" disabled={stepIdx === 0} onClick={() => setLabStep(stepIdx - 1)}>
           ‹
         </button>
         <span>
-          Step {stepIdx + 1} of {lab.steps.length}: <strong>{step.title}</strong>
+          Крок {stepIdx + 1} з {lab.steps.length}: <strong>{step.title}</strong>
         </span>
         <button
           className="btn"
@@ -95,12 +101,24 @@ export function LabPanel() {
                 <span>
                   {o.label}
                   {r && !r.pass && <span className="lab-obj-detail"> — {r.detail}</span>}
+                  {o.hint && state !== 'pass' && (
+                    <>
+                      {' '}
+                      <button
+                        className="lab-hint-btn"
+                        onClick={() => setOpenHints({ ...openHints, [o.id]: !openHints[o.id] })}
+                      >
+                        {openHints[o.id] ? 'сховати підказку' : '💡 підказка'}
+                      </button>
+                      {openHints[o.id] && <span className="lab-hint">{o.hint}</span>}
+                    </>
+                  )}
                 </span>
               </div>
             );
           })}
           <button className="btn lab-check" disabled={checking} onClick={() => checkStep()}>
-            {checking ? 'Checking (watch the packets)…' : 'Check objectives'}
+            {checking ? 'Перевіряю (дивись на пакети)…' : 'Перевірити'}
           </button>
         </div>
       )}
@@ -128,18 +146,20 @@ export function LabPanel() {
             })}
             {chosen !== undefined && (
               <div className={`lab-quiz-verdict ${chosen === q.answer ? 'correct' : 'wrong'}`}>
-                {chosen === q.answer ? 'Correct.' : 'Not quite — try again.'}
+                {chosen === q.answer ? 'Правильно!' : 'Не зовсім, спробуй ще.'}
               </div>
             )}
           </div>
         );
       })}
 
-      <div className="lab-footer">
-        <button className="btn" onClick={() => exportAttempt()}>
-          Export attempt for submission
-        </button>
-      </div>
+      {!kids && (
+        <div className="lab-footer">
+          <button className="btn" onClick={() => exportAttempt()}>
+            Зберегти роботу для вчителя
+          </button>
+        </div>
+      )}
     </div>
   );
 }

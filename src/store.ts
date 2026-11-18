@@ -16,6 +16,7 @@ import type { LabDef } from './labs/types';
 import { runChecks } from './labs/checker';
 import { LABS } from './labs/library';
 import { EXAMPLES } from './labs/examples';
+import { KIDS_LABS } from './labs/kids';
 import { zipSync, strToU8 } from 'fflate';
 import { configBundle } from './export/configs';
 import { containerlabYaml } from './export/containerlab';
@@ -39,7 +40,10 @@ export interface DropFlash {
 
 export type DevNode = Node<DevNodeData>;
 
-const AUTOSAVE_KEY = 'netsim:autosave:v1';
+/** kids: grades 5–9, no terminal, simple device form. full: the original netsim with terminals. */
+export type Mode = 'kids' | 'full';
+
+let autosaveKey = 'edu-network:kids:v1';
 const MAX_PACKETS = 150;
 
 function deviceNode(id: string, kind: DeviceKind, label: string, x: number, y: number): DevNode {
@@ -81,6 +85,12 @@ interface NetsimState {
   paused: boolean;
   speed: number;
   notice: string | null;
+
+  mode: Mode;
+  /** Bumped whenever a whole new network is loaded, so the canvas can re-fit. */
+  loadSeq: number;
+  /** The last «Перевірити зв'язок» run from the device form. */
+  connTest: { fromId: string; to: string; state: 'running' | 'ok' | 'fail'; detail: string } | null;
 
   lab: LabDef | null;
   labStep: number;
@@ -129,7 +139,10 @@ interface NetsimState {
   exportReport(): void;
   importJson(text: string): string | null;
   shareUrl(): void;
-  boot(): void;
+  boot(mode?: Mode): void;
+  setGateway(deviceId: string, text: string): string | null;
+  testConnection(fromId: string, toName: string): void;
+  loadKidsLab(index: number): void;
 
   loadBundledLab(index: number): void;
   loadExample(index: number): void;
@@ -138,6 +151,15 @@ interface NetsimState {
   checkStep(): void;
   exportAttempt(): void;
   closeLab(): void;
+}
+
+// Engine errors on cabling are English; children see these instead.
+function connectError(e: unknown): string {
+  const m = e instanceof Error ? e.message : String(e);
+  if (m.includes('no free interface')) return `${m.split(':')[0]}: немає вільного порту для кабелю`;
+  if (m.includes('itself')) return 'Пристрій не можна з’єднати сам із собою';
+  if (m.includes('already connected')) return 'Цей порт уже зайнятий';
+  return m;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -198,7 +220,7 @@ export const useStore = create<NetsimState>()((set, get) => {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
-        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(currentSave()));
+        localStorage.setItem(autosaveKey, JSON.stringify(currentSave()));
       } catch {
         // Storage full or unavailable; autosave is best-effort.
       }
@@ -218,6 +240,8 @@ export const useStore = create<NetsimState>()((set, get) => {
       selected: null,
       terminals: [],
       activeTerminal: null,
+      connTest: null,
+      loadSeq: get().loadSeq + 1,
       lab: data.lab ?? null,
       labStep: data.labProgress?.step ?? 0,
       labResults: data.labProgress?.results ?? {},
@@ -240,6 +264,10 @@ export const useStore = create<NetsimState>()((set, get) => {
     paused: false,
     speed: 1,
     notice: null,
+
+    mode: 'kids',
+    loadSeq: 0,
+    connTest: null,
 
     lab: null,
     labStep: 0,
@@ -293,7 +321,7 @@ export const useStore = create<NetsimState>()((set, get) => {
         set({ edges: edgesFromEngine() });
         saveSoon();
       } catch (e) {
-        get().setNotice(e instanceof Error ? e.message : String(e));
+        get().setNotice(connectError(e));
       }
     },
 
@@ -324,15 +352,15 @@ export const useStore = create<NetsimState>()((set, get) => {
 
     setIfaceIp(deviceId, ifaceName, value) {
       const d = sim.net.devices.get(deviceId);
-      if (!(d instanceof IpDevice)) return 'not an IP device';
+      if (!(d instanceof IpDevice)) return 'це не IP-пристрій';
       const iface = d.getInterface(ifaceName);
-      if (!iface) return 'no such interface';
+      if (!iface) return 'немає такого порту';
       const trimmed = value.trim();
       if (trimmed === '') {
         iface.ip = null;
       } else {
         const cidr = parseCidr(trimmed);
-        if (!cidr) return 'use CIDR form, e.g. 192.168.1.10/24';
+        if (!cidr) return 'впиши адресу так: 192.168.1.10/24';
         iface.ip = cidr;
       }
       get().refresh();
@@ -351,11 +379,11 @@ export const useStore = create<NetsimState>()((set, get) => {
 
     setServices(deviceId, proto, text) {
       const d = sim.net.devices.get(deviceId);
-      if (!(d instanceof IpDevice)) return 'not an IP device';
+      if (!(d instanceof IpDevice)) return 'це не IP-пристрій';
       const ports = new Set<number>();
       for (const part of text.split(',').map((p) => p.trim()).filter(Boolean)) {
         const n = Number(part);
-        if (!Number.isInteger(n) || n < 1 || n > 65535) return `invalid port "${part}"`;
+        if (!Number.isInteger(n) || n < 1 || n > 65535) return `неправильний порт «${part}»`;
         ports.add(n);
       }
       d.services[proto] = ports;
@@ -370,19 +398,19 @@ export const useStore = create<NetsimState>()((set, get) => {
       const text = listRuleset(d.fw);
       navigator.clipboard
         .writeText(text)
-        .then(() => get().setNotice(`${d.name} nftables config copied — paste into /etc/nftables.conf`))
-        .catch(() => get().setNotice('Could not access clipboard'));
+        .then(() => get().setNotice(`Налаштування nftables для ${d.name} скопійовано, встав у /etc/nftables.conf`))
+        .catch(() => get().setNotice('Немає доступу до буфера обміну'));
     },
 
     setNameserver(deviceId, text) {
       const d = sim.net.devices.get(deviceId);
-      if (!(d instanceof IpDevice)) return 'not an IP device';
+      if (!(d instanceof IpDevice)) return 'це не IP-пристрій';
       const trimmed = text.trim();
       if (trimmed === '') {
         d.nameserver = null;
       } else {
         const ip = parseIp(trimmed);
-        if (ip === null) return 'invalid nameserver address';
+        if (ip === null) return 'неправильна адреса DNS-сервера';
         d.nameserver = ip;
       }
       get().refresh();
@@ -414,19 +442,19 @@ export const useStore = create<NetsimState>()((set, get) => {
 
     setDhcpField(deviceId, field, text) {
       const d = sim.net.devices.get(deviceId);
-      if (!(d instanceof IpDevice) || !d.dhcpServer) return 'DHCP server not enabled';
+      if (!(d instanceof IpDevice) || !d.dhcpServer) return 'DHCP-сервер вимкнено';
       const trimmed = text.trim();
       if (field === 'router' || field === 'dns') {
         if (trimmed === '') {
           d.dhcpServer[field] = null;
         } else {
           const ip = parseIp(trimmed);
-          if (ip === null) return 'invalid address';
+          if (ip === null) return 'неправильна адреса';
           d.dhcpServer[field] = ip;
         }
       } else {
         const ip = parseIp(trimmed);
-        if (ip === null) return 'invalid address';
+        if (ip === null) return 'неправильна адреса';
         d.dhcpServer[field] = ip;
       }
       get().refresh();
@@ -445,14 +473,14 @@ export const useStore = create<NetsimState>()((set, get) => {
 
     setDnsRecords(deviceId, text) {
       const d = sim.net.devices.get(deviceId);
-      if (!(d instanceof IpDevice) || !d.dnsServer) return 'DNS server not enabled';
+      if (!(d instanceof IpDevice) || !d.dnsServer) return 'DNS-сервер вимкнено';
       const records = new Map<string, number>();
       for (const line of text.split('\n')) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) continue;
         const [addr, name] = trimmed.split(/\s+/);
         const ip = parseIp(addr ?? '');
-        if (ip === null || !name) return `invalid hosts line: "${trimmed}" (use: <ip> <name>)`;
+        if (ip === null || !name) return `неправильний рядок «${trimmed}» (формат: <ip> <ім’я>)`;
         records.set(name.toLowerCase(), ip);
       }
       d.dnsServer.records = records;
@@ -479,9 +507,9 @@ export const useStore = create<NetsimState>()((set, get) => {
 
     setHttpPort(deviceId, text) {
       const d = sim.net.devices.get(deviceId);
-      if (!(d instanceof IpDevice) || !d.httpServer) return 'web server not enabled';
+      if (!(d instanceof IpDevice) || !d.httpServer) return 'вебсервер вимкнено';
       const port = Number(text.trim());
-      if (!Number.isInteger(port) || port < 1 || port > 65535) return 'invalid port';
+      if (!Number.isInteger(port) || port < 1 || port > 65535) return 'неправильний порт';
       d.httpServer.port = port;
       get().refresh();
       saveSoon();
@@ -505,9 +533,9 @@ export const useStore = create<NetsimState>()((set, get) => {
 
     setPortVlan(deviceId, port, text) {
       const d = sim.net.devices.get(deviceId);
-      if (!(d instanceof SwitchDevice)) return 'not a switch';
+      if (!(d instanceof SwitchDevice)) return 'це не світч';
       const vlan = Number(text.trim());
-      if (!Number.isInteger(vlan) || vlan < 1 || vlan > 4094) return 'VLAN must be 1–4094';
+      if (!Number.isInteger(vlan) || vlan < 1 || vlan > 4094) return 'VLAN має бути від 1 до 4094';
       if (vlan === 1) d.vlans.delete(port);
       else d.vlans.set(port, vlan);
       get().refresh();
@@ -517,8 +545,8 @@ export const useStore = create<NetsimState>()((set, get) => {
 
     setSsid(deviceId, text) {
       const d = sim.net.devices.get(deviceId);
-      if (!(d instanceof ApDevice)) return 'not an access point';
-      if (!text.trim()) return 'SSID cannot be empty';
+      if (!(d instanceof ApDevice)) return 'це не точка доступу';
+      if (!text.trim()) return 'SSID не може бути порожнім';
       d.ssid = text.trim();
       get().refresh();
       saveSoon();
@@ -602,6 +630,7 @@ export const useStore = create<NetsimState>()((set, get) => {
         selected: null,
         terminals: [],
         activeTerminal: null,
+        connTest: null,
         lab: null,
         labStep: 0,
         labResults: {},
@@ -675,17 +704,17 @@ export const useStore = create<NetsimState>()((set, get) => {
       for (const f of files) entries[`netsim-configs/${f.path}`] = strToU8(f.content);
       const zipped = zipSync(entries);
       download('netsim-configs.zip', new Blob([zipped.slice().buffer], { type: 'application/zip' }));
-      get().setNotice('Config bundle exported — real iproute2/nftables/dnsmasq files');
+      get().setNotice('Налаштування пристроїв вивантажено: справжні файли iproute2, nftables, dnsmasq');
     },
 
     exportContainerlab() {
       download('netsim.clab.yml', new Blob([containerlabYaml(sim.net)], { type: 'text/yaml' }));
-      get().setNotice('containerlab topology exported — deploy with: containerlab deploy -t netsim.clab.yml');
+      get().setNotice('Схему для containerlab вивантажено, запуск: containerlab deploy -t netsim.clab.yml');
     },
 
     exportCompose() {
       download('docker-compose.yml', new Blob([composeYaml(sim.net)], { type: 'text/yaml' }));
-      get().setNotice('docker-compose exported (approximate L2 — see header note)');
+      get().setNotice('docker-compose вивантажено (L2 приблизно, див. примітку у файлі)');
     },
 
     exportSvg() {
@@ -695,7 +724,7 @@ export const useStore = create<NetsimState>()((set, get) => {
     exportPng() {
       svgToPngBlob(currentSvg())
         .then((blob) => download('netsim-topology.png', blob))
-        .catch(() => get().setNotice('PNG export failed in this browser — try the SVG export'));
+        .catch(() => get().setNotice('Цей браузер не зміг зберегти PNG, спробуй SVG'));
     },
 
     exportReport() {
@@ -711,7 +740,7 @@ export const useStore = create<NetsimState>()((set, get) => {
         saveSoon();
         return null;
       } catch (e) {
-        return e instanceof Error ? e.message : 'invalid file';
+        return e instanceof Error ? e.message : 'неправильний файл';
       }
     },
 
@@ -720,12 +749,16 @@ export const useStore = create<NetsimState>()((set, get) => {
       const url = `${location.origin}${location.pathname}#t=${compressed}`;
       navigator.clipboard
         .writeText(url)
-        .then(() => get().setNotice('Share link copied to clipboard'))
-        .catch(() => get().setNotice('Could not access clipboard — check the address bar instead'));
+        .then(() => get().setNotice('Посилання скопійовано'))
+        .catch(() => get().setNotice('Немає доступу до буфера обміну, скопіюй адресу з рядка браузера'));
       history.replaceState(null, '', `#t=${compressed}`);
     },
 
-    boot() {
+    boot(mode) {
+      if (mode) {
+        set({ mode });
+        autosaveKey = `edu-network:${mode}:v1`;
+      }
       if (location.hash.startsWith('#t=')) {
         const json = LZString.decompressFromEncodedURIComponent(location.hash.slice(3));
         if (json) {
@@ -734,11 +767,11 @@ export const useStore = create<NetsimState>()((set, get) => {
             history.replaceState(null, '', location.pathname);
             return;
           } catch {
-            get().setNotice('Could not load the shared topology from the URL');
+            get().setNotice('Не вдалося відкрити схему з посилання');
           }
         }
       }
-      const saved = localStorage.getItem(AUTOSAVE_KEY);
+      const saved = localStorage.getItem(autosaveKey);
       if (saved) {
         try {
           adoptSave(JSON.parse(saved) as SaveFile);
@@ -747,7 +780,8 @@ export const useStore = create<NetsimState>()((set, get) => {
           // Corrupt autosave: fall through to the demo.
         }
       }
-      get().loadDemo();
+      if (get().mode === 'kids') get().loadKidsLab(0);
+      else get().loadDemo();
     },
 
     loadBundledLab(index) {
@@ -755,6 +789,45 @@ export const useStore = create<NetsimState>()((set, get) => {
       if (!lab) return;
       adoptSave(JSON.parse(JSON.stringify(lab)) as SaveFile);
       saveSoon();
+    },
+
+    loadKidsLab(index) {
+      const lab = KIDS_LABS[index];
+      if (!lab) return;
+      adoptSave(JSON.parse(JSON.stringify(lab)) as SaveFile);
+      saveSoon();
+    },
+
+    setGateway(deviceId, text) {
+      const d = sim.net.devices.get(deviceId);
+      if (!(d instanceof IpDevice)) return 'це не IP-пристрій';
+      const trimmed = text.trim();
+      const via = trimmed === '' ? null : parseIp(trimmed);
+      if (trimmed !== '' && via === null) return 'шлюз — це адреса з чотирьох чисел, наприклад 192.168.1.1';
+      const old = d.staticRoutes.find((r) => r.prefix === 0);
+      if (old) d.delRoute(0, 0);
+      if (via !== null) {
+        const err = d.addRoute(0, 0, via);
+        if (err) {
+          if (old) d.staticRoutes.push(old);
+          return 'шлюз має бути в тій самій мережі, що й адреса пристрою';
+        }
+      }
+      get().refresh();
+      saveSoon();
+      return null;
+    },
+
+    testConnection(fromId, toName) {
+      const from = sim.net.devices.get(fromId);
+      if (!from || get().connTest?.state === 'running') return;
+      set({ connTest: { fromId, to: toName, state: 'running', detail: '' }, paused: false });
+      runChecks(
+        sim.net,
+        [{ id: 'conn', label: '', check: { type: 'ping', from: from.name, toDevice: toName, expect: 'success' } }],
+        (r) => set({ connTest: { fromId, to: toName, state: r.pass ? 'ok' : 'fail', detail: r.detail } }),
+        () => get().refresh(),
+      );
     },
 
     loadExample(index) {
@@ -781,10 +854,13 @@ export const useStore = create<NetsimState>()((set, get) => {
       if (!lab || get().labChecking) return;
       const step = lab.steps[get().labStep];
       if (!step || step.objectives.length === 0) return;
+      // Kids redo earlier steps too, so the counter never shows a step they skipped as undone.
+      const objectives =
+        get().mode === 'kids' ? lab.steps.slice(0, get().labStep + 1).flatMap((s) => s.objectives) : step.objectives;
       set({ labChecking: true, paused: false });
       runChecks(
         sim.net,
-        step.objectives,
+        objectives,
         (r) => {
           set({
             labResults: { ...get().labResults, [r.id]: { pass: r.pass, detail: r.detail } },
@@ -805,10 +881,10 @@ export const useStore = create<NetsimState>()((set, get) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `netsim-attempt-${lab.id}.json`;
+      a.download = `edu-network-${lab.id}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      get().setNotice('Attempt exported — submit the JSON file');
+      get().setNotice('Роботу збережено, надішли JSON-файл учителю');
     },
 
     closeLab() {
