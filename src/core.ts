@@ -9,3 +9,5 @@ export type { CheckResult } from './labs/checker';
 export type { Check, Objective, QuizQ, LabStep, LabDef, LabProgress } from './labs/types';
 export { LABS } from './labs/library';
 export { EXAMPLES } from './labs/examples';
+export { KIDS_LABS } from './labs/kids';
+export { explainFailure } from './kids/explain';

@@ -4,6 +4,8 @@
 // simulation with real packets, so "grading" is visible on the canvas.
 
 export type Check =
+  | { type: 'linked'; a: string; b: string }
+  | { type: 'unique-ips' }
   | { type: 'iface-ip'; device: string; iface: string; cidr?: string; inSubnet?: string }
   | { type: 'default-route'; device: string; via?: string }
   | { type: 'forwarding'; device: string; expect: boolean }
@@ -24,6 +26,8 @@ export interface Objective {
   id: string;
   label: string;
   check: Check;
+  /** Shown on request when the objective is not met yet: a nudge, not the answer. */
+  hint?: string;
 }
 
 export interface QuizQ {

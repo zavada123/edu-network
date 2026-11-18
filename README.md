@@ -4,12 +4,21 @@
 
 Це форк [michael-borck/netsim](https://github.com/michael-borck/netsim) (MIT, © 2026 Michael Borck). Оригінальна документація нижче.
 
+## Режими
+
+- **Дитячий** (`mode="kids"`, за замовчуванням, 5–9 клас): без термінала. Пристрій налаштовують у формі (IP-адреса, маска, шлюз), а кнопка «Перевірити зв’язок» надсилає ping і простими словами пояснює, чому відповіді немає. У меню «Завдання» три дитячі завдання з підказками: «Перша мережа», «Знайди помилку», «Роутер і шлюз».
+- **Повний** (`mode="full"`, 10–11 клас): усі інструменти netsim, термінали з командами Linux і оригінальні лабораторні (англійською). У демо відкривається через `?mode=full`.
+
+## Як написати завдання
+
+Завдання — це JSON-схема з полем `lab` (див. `src/labs/kids.ts` і `docs/LAB_AUTHORING.md`). До кожної цілі можна додати `hint`: учень відкриває її кнопкою «💡 підказка», поки ціль не виконано. Нові типи перевірок для дітей: `linked` (пристрої з’єднано кабелем) і `unique-ips` (усі адреси різні). Кожне завдання має тест у `src/labs/kids.test.ts`: воно не проходить на старті і проходить після правильного рішення.
+
 ## Пакет
 
 ```ts
-import { EduNetwork } from "edu-network/react"   // компонент тренажера
+import { EduNetwork } from "edu-network/react"   // <EduNetwork mode="kids" />
 import "edu-network/style.css"
-import { LABS, runChecks, restoreNetwork } from "edu-network/core" // рушій і перевірка, без React
+import { KIDS_LABS, LABS, runChecks, restoreNetwork } from "edu-network/core" // рушій і перевірка, без React
 ```
 
 - `npm run dev` — демо-сторінка, `npm test` — тести рушія й лабів, `npm run build:lib` — збірка пакета в `lib/`.

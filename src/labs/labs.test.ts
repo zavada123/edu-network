@@ -48,7 +48,7 @@ describe('lab 1 — static addressing', () => {
 
     let r = check(net, step1);
     expect(r['l1-ip1'].pass).toBe(false);
-    expect(r['l1-ip1'].detail).toContain('no address');
+    expect(r['l1-ip1'].detail).toContain('немає адреси');
 
     device(net, 'pc1').getInterface('eth0')!.ip = parseCidr('192.168.1.10/24');
     device(net, 'pc2').getInterface('eth0')!.ip = parseCidr('192.168.1.20/24');

@@ -5,15 +5,17 @@ import { Inspector } from './components/Inspector';
 import { TerminalDock } from './components/TerminalDock';
 import { Toolbar } from './components/Toolbar';
 import { LabPanel } from './components/LabPanel';
+import { KidsInspector } from './components/KidsInspector';
 import { useStore } from './store';
 
 export default function App() {
   const selected = useStore((s) => s.selected);
-  const hasTerminals = useStore((s) => s.terminals.length > 0);
+  const kids = useStore((s) => s.mode === 'kids');
+  const hasTerminals = useStore((s) => s.terminals.length > 0) && !kids;
 
   return (
     <ReactFlowProvider>
-      <div className={`app${hasTerminals ? ' with-dock' : ''}`}>
+      <div className={`app${hasTerminals ? ' with-dock' : ''}${kids ? ' kids' : ''}`}>
         <Toolbar />
         <div className="main">
           <Palette />
@@ -21,9 +23,9 @@ export default function App() {
             <Flow />
             <LabPanel />
           </div>
-          {selected && <Inspector />}
+          {selected && (kids ? <KidsInspector /> : <Inspector />)}
         </div>
-        <TerminalDock />
+        {!kids && <TerminalDock />}
       </div>
     </ReactFlowProvider>
   );

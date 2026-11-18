@@ -15,6 +15,8 @@ export interface DropFlash {
     until: number;
 }
 export type DevNode = Node<DevNodeData>;
+/** kids: grades 5–9, no terminal, simple device form. full: the original netsim with terminals. */
+export type Mode = 'kids' | 'full';
 interface NetsimState {
     nodes: DevNode[];
     edges: Edge[];
@@ -28,6 +30,16 @@ interface NetsimState {
     paused: boolean;
     speed: number;
     notice: string | null;
+    mode: Mode;
+    /** Bumped whenever a whole new network is loaded, so the canvas can re-fit. */
+    loadSeq: number;
+    /** The last «Перевірити зв'язок» run from the device form. */
+    connTest: {
+        fromId: string;
+        to: string;
+        state: 'running' | 'ok' | 'fail';
+        detail: string;
+    } | null;
     lab: LabDef | null;
     labStep: number;
     labResults: Record<string, {
@@ -80,7 +92,10 @@ interface NetsimState {
     exportReport(): void;
     importJson(text: string): string | null;
     shareUrl(): void;
-    boot(): void;
+    boot(mode?: Mode): void;
+    setGateway(deviceId: string, text: string): string | null;
+    testConnection(fromId: string, toName: string): void;
+    loadKidsLab(index: number): void;
     loadBundledLab(index: number): void;
     loadExample(index: number): void;
     setLabStep(step: number): void;

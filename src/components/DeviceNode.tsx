@@ -81,7 +81,7 @@ function DeviceNodeInner({ data, selected }: NodeProps<DevNode>) {
         <DeviceIcon kind={data.kind} />
       </div>
       {data.fw === true && (
-        <span className="dev-fw-badge" title="firewall rules active">
+        <span className="dev-fw-badge" title="діють правила брандмауера">
           ⛨
         </span>
       )}
