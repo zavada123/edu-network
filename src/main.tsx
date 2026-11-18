@@ -1,10 +1,4 @@
 import { createRoot } from 'react-dom/client';
-import '@xyflow/react/dist/style.css';
-import '@xterm/xterm/css/xterm.css';
-import './styles.css';
-import App from './App';
-import { useStore } from './store';
+import { EduNetwork } from './ui/EduNetwork';
 
-useStore.getState().boot();
-
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(<EduNetwork />);
