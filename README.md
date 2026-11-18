@@ -1,3 +1,21 @@
+# edu-network — тренажер «Мережева лабораторія»
+
+Навчальний тренажер для EduProstir: учень збирає мережу з ПК, світчів і роутерів, задає IP-адреси, маску й шлюз і перевіряє зв'язок через `ping`. Усе працює в браузері, без сервера.
+
+Це форк [michael-borck/netsim](https://github.com/michael-borck/netsim) (MIT, © 2026 Michael Borck). Оригінальна документація нижче.
+
+## Пакет
+
+```ts
+import { EduNetwork } from "edu-network/react"   // компонент тренажера
+import "edu-network/style.css"
+import { LABS, runChecks, restoreNetwork } from "edu-network/core" // рушій і перевірка, без React
+```
+
+- `npm run dev` — демо-сторінка, `npm test` — тести рушія й лабів, `npm run build:lib` — збірка пакета в `lib/`.
+
+---
+
 # NetSim
 
 **A network simulator that runs entirely in your browser — real Linux syntax, drag-and-drop
