@@ -1,8 +1,8 @@
-import { Device, NetInterface } from './device';
-import type { AppData, DhcpApp, EthernetFrame, IcmpMessage, Ipv4Packet, L4 } from './types';
-import { type U32 } from './ip';
-import { FirewallModel, type FilterHook } from './firewall';
-import { ConnTrack } from './conntrack';
+import { Device, NetInterface } from './device.js';
+import type { AppData, DhcpApp, EthernetFrame, IcmpMessage, Ipv4Packet, L4 } from './types.js';
+import { type U32 } from './ip.js';
+import { FirewallModel, type FilterHook } from './firewall.js';
+import { ConnTrack } from './conntrack.js';
 export declare const DEFAULT_TTL = 64;
 export type IcmpEvent = {
     type: 'reply';
@@ -188,4 +188,4 @@ export declare class FirewallDevice extends IpDevice {
     readonly kind: 'firewall';
     constructor(network: Network, id: string, name: string);
 }
-import type { Network } from './network';
+import type { Network } from './network.js';

@@ -1,0 +1,8 @@
+/* Demo page only: the trainer fills the window. The package styles never touch html or body. */
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: #0a0f1c;
+}

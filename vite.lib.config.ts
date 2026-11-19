@@ -15,8 +15,9 @@ export default defineConfig({
       cssFileName: "style"
     },
     rollupOptions: {
-      // React stays with the host page; the rest (React Flow, xterm, zustand) is bundled in.
-      external: ["react", "react-dom", "react/jsx-runtime"]
+      // React and the runtime dependencies stay with the host page: the host installs them from `dependencies`, and
+      // its bundler resolves their CommonJS parts (zustand and React Flow require "react"). Their CSS is bundled in.
+      external: (id) => !id.endsWith(".css") && (/^(react|react-dom|zustand|fflate|lz-string)(\/|$)/.test(id) || /^@(xyflow|xterm)\//.test(id))
     }
   }
 })

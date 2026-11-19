@@ -1,7 +1,8 @@
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from '@xyflow/react';
-import { type WireTransfer } from './engine/network';
-import type { DeviceKind } from './engine/device';
-import type { LabDef } from './labs/types';
+import { type WireTransfer } from './engine/network.js';
+import type { DeviceKind } from './engine/device.js';
+import { type SaveFile } from './engine/serialize.js';
+import type { LabDef } from './labs/types.js';
 export interface DevNodeData extends Record<string, unknown> {
     kind: DeviceKind;
     label: string;
@@ -17,6 +18,11 @@ export interface DropFlash {
 export type DevNode = Node<DevNodeData>;
 /** kids: grades 5–9, no terminal, simple device form. full: the original netsim with terminals. */
 export type Mode = 'kids' | 'full';
+/** Set when a host page embeds one exercise: no autosave, no shared links, changes go to `onChange`. */
+export interface EmbedHooks {
+    onChange?: (network: SaveFile) => void;
+    onCheck?: (ok: boolean) => void;
+}
 interface NetsimState {
     nodes: DevNode[];
     edges: Edge[];
@@ -93,6 +99,17 @@ interface NetsimState {
     importJson(text: string): string | null;
     shareUrl(): void;
     boot(mode?: Mode): void;
+    /** Opens one exercise for a host page. `start` is the network to reset to with «Почати спочатку». */
+    embedLab(file: SaveFile, start: SaveFile, hooks: EmbedHooks): void;
+    resetLab(): void;
+    embedded: boolean;
+    selfCheck: boolean;
+    onNext: (() => void) | null;
+    setEmbedOptions(o: {
+        selfCheck: boolean;
+        onNext: (() => void) | null;
+        hooks: EmbedHooks | null;
+    }): void;
     setGateway(deviceId: string, text: string): string | null;
     testConnection(fromId: string, toName: string): void;
     loadKidsLab(index: number): void;

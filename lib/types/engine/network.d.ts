@@ -1,7 +1,7 @@
-import { Scheduler } from './scheduler';
-import { Link } from './device';
-import type { Device, DeviceKind, NetInterface } from './device';
-import type { EthernetFrame } from './types';
+import { Scheduler } from './scheduler.js';
+import { Link } from './device.js';
+import type { Device, DeviceKind, NetInterface } from './device.js';
+import type { EthernetFrame } from './types.js';
 export interface WireTransfer {
     id: number;
     linkId: string;

@@ -28,6 +28,9 @@ export function LabPanel() {
   const [collapsed, setCollapsed] = useState(false);
   const [openHints, setOpenHints] = useState<Record<string, boolean>>({});
   const kids = useStore((s) => s.mode === 'kids');
+  const selfCheck = useStore((s) => s.selfCheck);
+  const onNext = useStore((s) => s.onNext);
+  const embedded = useStore((s) => s.embedded);
 
   if (!lab) return null;
   const step = lab.steps[stepIdx];
@@ -67,7 +70,14 @@ export function LabPanel() {
       </div>
 
       {allObjectives.length > 0 && passed === allObjectives.length && (
-        <div className="lab-done">🎉 Завдання виконано!</div>
+        <div className="lab-done">
+          🎉 Завдання виконано!
+          {onNext && (
+            <button className="btn primary lab-next" onClick={() => onNext()}>
+              Наступна вправа →
+            </button>
+          )}
+        </div>
       )}
 
       <div className="lab-stepnav">
@@ -117,9 +127,11 @@ export function LabPanel() {
               </div>
             );
           })}
-          <button className="btn lab-check" disabled={checking} onClick={() => checkStep()}>
-            {checking ? 'Перевіряю (дивись на пакети)…' : 'Перевірити'}
-          </button>
+          {selfCheck && (
+            <button className="btn lab-check" disabled={checking} onClick={() => checkStep()}>
+              {checking ? 'Перевіряю (дивись на пакети)…' : 'Перевірити'}
+            </button>
+          )}
         </div>
       )}
 
@@ -153,7 +165,7 @@ export function LabPanel() {
         );
       })}
 
-      {!kids && (
+      {!kids && !embedded && (
         <div className="lab-footer">
           <button className="btn" onClick={() => exportAttempt()}>
             Зберегти роботу для вчителя

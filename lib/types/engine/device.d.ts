@@ -1,6 +1,6 @@
-import type { Network } from './network';
-import type { EthernetFrame } from './types';
-import type { U32 } from './ip';
+import type { Network } from './network.js';
+import type { EthernetFrame } from './types.js';
+import type { U32 } from './ip.js';
 export type DeviceKind = 'host' | 'switch' | 'router' | 'firewall' | 'server' | 'ap';
 export declare class NetInterface {
     device: Device;

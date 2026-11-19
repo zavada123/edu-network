@@ -1,4 +1,4 @@
-import type { FilterHook, FilterRule, FirewallModel, NatHook, NatRule, RuleMatch } from './firewall';
+import type { FilterHook, FilterRule, FirewallModel, NatHook, NatRule, RuleMatch } from './firewall.js';
 export declare function matchToNft(m: RuleMatch): string;
 export declare function filterRuleText(r: FilterRule): string;
 export declare function natRuleText(r: NatRule): string;

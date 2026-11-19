@@ -1,5 +1,5 @@
-import type { Ipv4Packet } from './types';
-import { type U32 } from './ip';
+import type { Ipv4Packet } from './types.js';
+import { type U32 } from './ip.js';
 export type Verdict = 'accept' | 'drop' | 'reject';
 export type CtStateName = 'new' | 'established' | 'related' | 'invalid';
 export type FilterHook = 'input' | 'forward' | 'output';

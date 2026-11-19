@@ -48,6 +48,8 @@ export function Toolbar() {
   const loadExample = useStore((s) => s.loadExample);
   const loadKidsLab = useStore((s) => s.loadKidsLab);
   const kids = useStore((s) => s.mode === 'kids');
+  const embedded = useStore((s) => s.embedded);
+  const resetLab = useStore((s) => s.resetLab);
   const clock = useStore((s) => s.clock);
   const paused = useStore((s) => s.paused);
   const speed = useStore((s) => s.speed);
@@ -74,6 +76,13 @@ export function Toolbar() {
         <span className="brand-name">Мережева лабораторія</span>
       </div>
 
+      {embedded ? (
+        <div className="toolbar-group">
+          <button className="btn" onClick={() => resetLab()}>
+            Почати спочатку
+          </button>
+        </div>
+      ) : (
       <div className="toolbar-group">
         <button className="btn" onClick={() => newTopology()}>
           Нова схема
@@ -175,6 +184,7 @@ export function Toolbar() {
           onChange={(e) => onFile(e.target.files?.[0])}
         />
       </div>
+      )}
 
       <div className="toolbar-group sim-controls">
         <button className="btn" onClick={() => setPaused(!paused)} title={paused ? 'Продовжити' : 'Пауза'}>

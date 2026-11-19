@@ -1,7 +1,7 @@
-import { Network } from './network';
-import type { DeviceKind } from './device';
-import { type FirewallJSON } from './firewall';
-import type { LabDef, LabProgress } from '../labs/types';
+import { Network } from './network.js';
+import type { DeviceKind } from './device.js';
+import { type FirewallJSON } from './firewall.js';
+import type { LabDef, LabProgress } from '../labs/types.js';
 export interface SavedIface {
     name: string;
     ip: string | null;

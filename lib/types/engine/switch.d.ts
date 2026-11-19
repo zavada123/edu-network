@@ -1,6 +1,6 @@
-import { Device, NetInterface } from './device';
-import type { Network } from './network';
-import type { EthernetFrame } from './types';
+import { Device, NetInterface } from './device.js';
+import type { Network } from './network.js';
+import type { EthernetFrame } from './types.js';
 export declare class SwitchDevice extends Device {
     readonly kind: 'switch' | 'ap';
     macTable: Map<string, NetInterface>;

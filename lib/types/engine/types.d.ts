@@ -1,4 +1,4 @@
-import type { U32 } from './ip';
+import type { U32 } from './ip.js';
 export interface ArpPayload {
     kind: 'arp';
     op: 'request' | 'reply';
