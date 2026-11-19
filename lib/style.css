@@ -841,7 +841,7 @@ svg.react-flow__connectionline {
     z-index: 2;
     position: relative;
 }
-:root {
+.app {
   --bg: #0a0f1c;
   --bg-panel: #0f172a;
   --bg-raised: #16223b;
@@ -857,25 +857,22 @@ svg.react-flow__connectionline {
   --ap: #f472b6;
   --danger: #f87171;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  margin: 0;
-  height: 100%;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.app {
+  /* The host page sets the height with --enet-height (the demo fills the window). */
+  position: relative;
   display: grid;
   grid-template-rows: 52px 1fr;
-  height: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  height: var(--enet-height, 100%);
+  background: var(--bg);
+  color: var(--text);
+  line-height: normal;
+  text-align: left;
+}
+
+.app *,
+.app *::before,
+.app *::after {
+  box-sizing: border-box;
 }
 
 .app.with-dock {
@@ -1950,9 +1947,6 @@ a.btn {
 
 /* ---------- phone ---------- */
 @media (max-width: 720px) {
-  .app {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .main,
   .palette,
   .toolbar {
@@ -2007,7 +2001,7 @@ a.btn {
   }
   .inspector,
   .app.kids .inspector {
-    position: fixed;
+    position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
@@ -2022,5 +2016,12 @@ a.btn {
   .react-flow__minimap {
     display: none;
   }
+}
+
+.lab-done {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 /*$vite$:1*/

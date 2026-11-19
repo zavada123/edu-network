@@ -11,3 +11,14 @@ export { LABS } from './labs/library';
 export { EXAMPLES } from './labs/examples';
 export { KIDS_LABS } from './labs/kids';
 export { explainFailure } from './kids/explain';
+export {
+  scenarios,
+  scenarioById,
+  startNetwork,
+  referenceNetwork,
+  parseNetwork,
+  grade,
+  describeNetwork,
+  LIMITS,
+} from './scenarios';
+export type { Scenario, ScenarioTopic, Grade, GoalResult } from './scenarios';

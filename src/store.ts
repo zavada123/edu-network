@@ -44,6 +44,13 @@ export type DevNode = Node<DevNodeData>;
 export type Mode = 'kids' | 'full';
 
 let autosaveKey = 'edu-network:kids:v1';
+
+/** Set when a host page embeds one exercise: no autosave, no shared links, changes go to `onChange`. */
+export interface EmbedHooks {
+  onChange?: (network: SaveFile) => void;
+  onCheck?: (ok: boolean) => void;
+}
+let embed: EmbedHooks | null = null;
 const MAX_PACKETS = 150;
 
 function deviceNode(id: string, kind: DeviceKind, label: string, x: number, y: number): DevNode {
@@ -140,6 +147,13 @@ interface NetsimState {
   importJson(text: string): string | null;
   shareUrl(): void;
   boot(mode?: Mode): void;
+  /** Opens one exercise for a host page. `start` is the network to reset to with «Почати спочатку». */
+  embedLab(file: SaveFile, start: SaveFile, hooks: EmbedHooks): void;
+  resetLab(): void;
+  embedded: boolean;
+  selfCheck: boolean;
+  onNext: (() => void) | null;
+  setEmbedOptions(o: { selfCheck: boolean; onNext: (() => void) | null; hooks: EmbedHooks | null }): void;
   setGateway(deviceId: string, text: string): string | null;
   testConnection(fromId: string, toName: string): void;
   loadKidsLab(index: number): void;
@@ -185,10 +199,16 @@ export const useStore = create<NetsimState>()((set, get) => {
   };
   wireNet(sim.net);
 
-  const currentSave = (): SaveFile => {
+  const positionsNow = () => {
     const positions: Record<string, { x: number; y: number }> = {};
     for (const n of get().nodes) positions[n.id] = { x: n.position.x, y: n.position.y };
-    const save = serializeNetwork(sim.net, positions);
+    return positions;
+  };
+
+  let embedStart: SaveFile | null = null;
+
+  const currentSave = (): SaveFile => {
+    const save = serializeNetwork(sim.net, positionsNow());
     const lab = get().lab;
     if (lab) {
       save.lab = lab;
@@ -219,6 +239,10 @@ export const useStore = create<NetsimState>()((set, get) => {
   const saveSoon = () => {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
+      if (embed) {
+        embed.onChange?.(serializeNetwork(sim.net, positionsNow()));
+        return;
+      }
       try {
         localStorage.setItem(autosaveKey, JSON.stringify(currentSave()));
       } catch {
@@ -267,6 +291,9 @@ export const useStore = create<NetsimState>()((set, get) => {
 
     mode: 'kids',
     loadSeq: 0,
+    embedded: false,
+    selfCheck: true,
+    onNext: null,
     connTest: null,
 
     lab: null,
@@ -791,6 +818,24 @@ export const useStore = create<NetsimState>()((set, get) => {
       saveSoon();
     },
 
+    embedLab(file, start, hooks) {
+      embed = hooks;
+      embedStart = start;
+      set({ mode: 'kids', embedded: true });
+      adoptSave(JSON.parse(JSON.stringify(file)) as SaveFile);
+    },
+
+    resetLab() {
+      if (!embedStart) return;
+      adoptSave(JSON.parse(JSON.stringify(embedStart)) as SaveFile);
+      saveSoon();
+    },
+
+    setEmbedOptions(o) {
+      embed = o.hooks;
+      set({ selfCheck: o.selfCheck, onNext: o.onNext });
+    },
+
     loadKidsLab(index) {
       const lab = KIDS_LABS[index];
       if (!lab) return;
@@ -856,7 +901,11 @@ export const useStore = create<NetsimState>()((set, get) => {
       if (!step || step.objectives.length === 0) return;
       // Kids redo earlier steps too, so the counter never shows a step they skipped as undone.
       const objectives =
-        get().mode === 'kids' ? lab.steps.slice(0, get().labStep + 1).flatMap((s) => s.objectives) : step.objectives;
+        get().embedded
+          ? lab.steps.flatMap((s) => s.objectives)
+          : get().mode === 'kids'
+            ? lab.steps.slice(0, get().labStep + 1).flatMap((s) => s.objectives)
+            : step.objectives;
       set({ labChecking: true, paused: false });
       runChecks(
         sim.net,
@@ -870,6 +919,8 @@ export const useStore = create<NetsimState>()((set, get) => {
           set({ labChecking: false });
           get().refresh();
           saveSoon();
+          const all = lab.steps.flatMap((s) => s.objectives);
+          if (all.length > 0) embed?.onCheck?.(all.every((o) => get().labResults[o.id]?.pass));
         },
       );
     },
