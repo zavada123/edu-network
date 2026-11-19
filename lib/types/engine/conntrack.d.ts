@@ -1,6 +1,6 @@
-import type { Ipv4Packet } from './types';
-import type { U32 } from './ip';
-import type { CtStateName } from './firewall';
+import type { Ipv4Packet } from './types.js';
+import type { U32 } from './ip.js';
+import type { CtStateName } from './firewall.js';
 export interface Tuple {
     proto: 'tcp' | 'udp' | 'icmp';
     srcIp: U32;

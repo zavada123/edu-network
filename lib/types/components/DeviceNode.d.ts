@@ -1,6 +1,6 @@
 import type { NodeProps } from '@xyflow/react';
-import type { DevNode } from '../store';
-import type { DeviceKind } from '../engine/device';
+import type { DevNode } from '../store.js';
+import type { DeviceKind } from '../engine/device.js';
 export declare const NODE_W = 96;
 export declare const NODE_H = 78;
 export declare function DeviceIcon({ kind, size }: {

@@ -1,4 +1,4 @@
-import type { Network } from '../engine/network';
+import type { Network } from '../engine/network.js';
 export interface NodePos {
     id: string;
     x: number;

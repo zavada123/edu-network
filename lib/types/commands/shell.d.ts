@@ -1,4 +1,4 @@
-import type { IpDevice } from '../engine/ipdevice';
+import type { IpDevice } from '../engine/ipdevice.js';
 export interface TermIO {
     write(s: string): void;
 }

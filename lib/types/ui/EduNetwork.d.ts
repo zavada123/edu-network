@@ -1,9 +1,9 @@
 import '@xyflow/react/dist/style.css';
 import '@xterm/xterm/css/xterm.css';
 import '../styles.css';
-import { type Mode } from '../store';
-import type { SaveFile } from '../engine/serialize';
-import { type Scenario } from '../scenarios';
+import { type Mode } from '../store.js';
+import type { SaveFile } from '../engine/serialize.js';
+import { type Scenario } from '../scenarios/index.js';
 export interface EduNetworkProps {
     /** `kids` (default): grades 5–9, no terminal, simple device form. `full`: terminals and every netsim tool. */
     mode?: Mode;

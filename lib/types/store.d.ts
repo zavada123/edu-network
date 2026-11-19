@@ -1,8 +1,8 @@
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from '@xyflow/react';
-import { type WireTransfer } from './engine/network';
-import type { DeviceKind } from './engine/device';
-import { type SaveFile } from './engine/serialize';
-import type { LabDef } from './labs/types';
+import { type WireTransfer } from './engine/network.js';
+import type { DeviceKind } from './engine/device.js';
+import { type SaveFile } from './engine/serialize.js';
+import type { LabDef } from './labs/types.js';
 export interface DevNodeData extends Record<string, unknown> {
     kind: DeviceKind;
     label: string;

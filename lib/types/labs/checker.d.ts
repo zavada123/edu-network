@@ -1,5 +1,5 @@
-import type { Network } from '../engine/network';
-import type { Objective } from './types';
+import type { Network } from '../engine/network.js';
+import type { Objective } from './types.js';
 export interface CheckResult {
     id: string;
     pass: boolean;

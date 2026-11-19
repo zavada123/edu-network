@@ -1,6 +1,6 @@
-import type { Network } from '../engine/network';
-import type { NetInterface } from '../engine/device';
-import { IpDevice } from '../engine/ipdevice';
+import type { Network } from '../engine/network.js';
+import type { NetInterface } from '../engine/device.js';
+import { IpDevice } from '../engine/ipdevice.js';
 interface Attachment {
     device: IpDevice;
     iface: NetInterface;

@@ -1,4 +1,4 @@
-import { type SaveFile } from '../engine/serialize';
+import { type SaveFile } from '../engine/serialize.js';
 export type ScenarioTopic = 'lan' | 'addresses' | 'routing';
 export interface Scenario {
     readonly id: string;

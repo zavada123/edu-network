@@ -1,6 +1,6 @@
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import type { IpDevice } from './engine/ipdevice';
+import type { IpDevice } from './engine/ipdevice.js';
 export interface SessionOpts {
     onAfterCommand?: () => void;
 }
