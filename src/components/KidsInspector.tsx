@@ -130,7 +130,7 @@ function ConnectionTest({ device }: { device: IpDevice }) {
     <section className="kid-conn">
       <h3>Перевірити зв’язок</h3>
       <div className="kid-conn-row">
-        <select value={chosen} onChange={(e) => setTarget(e.target.value)}>
+        <select aria-label="Куди надіслати перевірку" value={chosen} onChange={(e) => setTarget(e.target.value)}>
           {others.map((n) => (
             <option key={n} value={n}>
               {n}

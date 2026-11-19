@@ -190,7 +190,7 @@ export function Toolbar() {
         <button className="btn" onClick={() => setPaused(!paused)} title={paused ? 'Продовжити' : 'Пауза'}>
           {paused ? '▶ Пуск' : '⏸ Пауза'}
         </button>
-        <select className="speed" value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
+        <select className="speed" aria-label="Швидкість симуляції" value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
           <option value={0.25}>0.25×</option>
           <option value={0.5}>0.5×</option>
           <option value={1}>1×</option>
